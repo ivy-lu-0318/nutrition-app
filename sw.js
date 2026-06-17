@@ -1,11 +1,11 @@
-const CACHE_NAME = 'nutrition-app-v1';
+const CACHE_NAME = 'nutrition-app-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './tfnd.json',
   './icon-192.png',
   './icon-512.png',
+  // tfnd.json 不快取，讓瀏覽器直接從網路拿，避免 iOS Safari 快取大檔出錯
 ];
 
 self.addEventListener('install', e => {
@@ -25,6 +25,11 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // tfnd.json 永遠從網路取，不走快取
+  if (e.request.url.includes('tfnd.json')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
