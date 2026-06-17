@@ -348,19 +348,31 @@ function formatDate(iso) {
   return `${d.getMonth()+1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
 }
 
-// ─── TFND（記憶體載入，不走 IndexedDB）────────────────────────────────────────
-async function loadTFND() {
+// ─── TFND（XMLHttpRequest 載入，iOS Safari fetch 相容性較差）────────────────────
+function loadTFND() {
   const el = document.getElementById('tfnd-status');
-  try {
-    el.textContent = '正在下載食物資料庫...';
-    const resp = await fetch('./tfnd.json');
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    tfndFoods = await resp.json();
-    el.textContent = `已載入 ${tfndFoods.length} 筆 TFND 食物資料（生重 / 100g）`;
-    showToast(`食物資料庫就緒（${tfndFoods.length} 筆）`);
-  } catch (err) {
-    el.innerHTML = `載入失敗：${err.message} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="loadTFND()">重試</button>`;
-  }
+  el.textContent = '正在下載食物資料庫...';
+  const url = location.origin + location.pathname.replace(/\/[^/]*$/, '/') + 'tfnd.json';
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url);
+  xhr.responseType = 'text';
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      try {
+        tfndFoods = JSON.parse(xhr.responseText);
+        el.textContent = `已載入 ${tfndFoods.length} 筆 TFND 食物資料（生重 / 100g）`;
+        showToast(`食物資料庫就緒（${tfndFoods.length} 筆）`);
+      } catch (e) {
+        el.innerHTML = `JSON 解析失敗：${e.message} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="loadTFND()">重試</button>`;
+      }
+    } else {
+      el.innerHTML = `載入失敗：HTTP ${xhr.status} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="loadTFND()">重試</button>`;
+    }
+  };
+  xhr.onerror = () => {
+    el.innerHTML = `載入失敗：網路錯誤 <button class="btn-green text-xs px-2 py-1 ml-2" onclick="loadTFND()">重試</button>`;
+  };
+  xhr.send();
 }
 
 // ─── Search ──────────────────────────────────────────────────────────────────
