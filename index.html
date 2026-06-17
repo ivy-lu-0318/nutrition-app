@@ -243,10 +243,9 @@ function openDB() {
     const req = indexedDB.open('NutritionApp', 2);
     req.onupgradeneeded = e => {
       const d = e.target.result;
+      // foods store 只存自訂食物（TFND 改為記憶體載入）
       if (!d.objectStoreNames.contains('foods')) {
-        const fs = d.createObjectStore('foods', { keyPath: 'id' });
-        fs.createIndex('name', 'name', { unique: false });
-        fs.createIndex('source', 'source', { unique: false });
+        d.createObjectStore('foods', { keyPath: 'id' });
       }
       if (!d.objectStoreNames.contains('logs')) {
         const ls = d.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
@@ -319,7 +318,7 @@ function dbClearStore(store) {
 let selectedFood = null;
 let goals = { calories: 1500, protein: 150, carbs: 113, fat: 50 };
 let goalMode = 'pct';
-let tfndLoaded = false;
+let tfndFoods = [];   // TFND 資料放記憶體，不存 IndexedDB
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 async function init() {
@@ -327,7 +326,7 @@ async function init() {
   await loadGoals();
   setTodayDate();
   await loadDayLogs();
-  await checkTFND();
+  loadTFND();           // 非同步載入，不 await，讓頁面先顯示
   renderCustomFoodsList();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -345,55 +344,18 @@ function formatDate(iso) {
   return `${d.getMonth()+1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
 }
 
-// ─── TFND ────────────────────────────────────────────────────────────────────
-async function checkTFND() {
-  const count = await countFoods('tfnd');
-  const el = document.getElementById('tfnd-status');
-  if (count > 0) {
-    el.textContent = `已載入 ${count} 筆 TFND 食物資料（生重 / 100g）`;
-    tfndLoaded = true;
-  } else {
-    el.textContent = '尚未載入 TFND 資料，嘗試自動從 tfnd.json 匯入...';
-    await tryLoadTFND();
-  }
-}
-
-async function countFoods(source) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction('foods', 'readonly');
-    const req = tx.objectStore('foods').index('source').count(source);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(0);
-  });
-}
-
-async function tryLoadTFND() {
+// ─── TFND（記憶體載入，不走 IndexedDB）────────────────────────────────────────
+async function loadTFND() {
   const el = document.getElementById('tfnd-status');
   try {
     el.textContent = '正在下載食物資料庫...';
     const resp = await fetch('./tfnd.json');
-    if (!resp.ok) throw new Error(`下載失敗（HTTP ${resp.status}）`);
-    const data = await resp.json();
-    el.textContent = `下載完成，寫入資料庫中（共 ${data.length} 筆）...`;
-
-    // 分批寫入，每批 100 筆，避免 iOS Safari 大型 transaction 失敗
-    const BATCH = 100;
-    for (let i = 0; i < data.length; i += BATCH) {
-      const chunk = data.slice(i, i + BATCH);
-      await new Promise((res, rej) => {
-        const tx = db.transaction('foods', 'readwrite');
-        const store = tx.objectStore('foods');
-        for (const food of chunk) store.put(food);
-        tx.oncomplete = res;
-        tx.onerror = () => rej(tx.error);
-      });
-    }
-
-    el.textContent = `已載入 ${data.length} 筆 TFND 食物資料（生重 / 100g）`;
-    tfndLoaded = true;
-    showToast(`TFND 資料庫載入完成（${data.length} 筆）`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    tfndFoods = await resp.json();
+    el.textContent = `已載入 ${tfndFoods.length} 筆 TFND 食物資料（生重 / 100g）`;
+    showToast(`食物資料庫就緒（${tfndFoods.length} 筆）`);
   } catch (err) {
-    el.innerHTML = `載入失敗：${err.message} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="tryLoadTFND()">重試</button>`;
+    el.innerHTML = `載入失敗：${err.message} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="loadTFND()">重試</button>`;
   }
 }
 
@@ -405,14 +367,15 @@ async function searchFoods() {
   const q = document.getElementById('food-search').value.trim();
   const el = document.getElementById('search-results');
   if (!q) { el.classList.add('hidden'); return; }
-  if (!tfndLoaded) {
+  if (!tfndFoods.length) {
     el.innerHTML = '<div class="px-3 py-2 text-sm text-yellow-400">食物資料庫載入中，請稍候…</div>';
     el.classList.remove('hidden');
     return;
   }
   searchTimeout = setTimeout(async () => {
-    const all = await dbGetAll('foods');
-    const results = all
+    const customFoods = await dbGetByIndex('foods', 'source', 'custom');
+    const allFoods = [...customFoods, ...tfndFoods];
+    const results = allFoods
       .filter(f => f.name.includes(q))
       .sort((a, b) => {
         if (a.source === 'custom' && b.source !== 'custom') return -1;
@@ -657,7 +620,7 @@ async function addCustomFood() {
 }
 
 async function renderCustomFoodsList() {
-  const all = await dbGetByIndex('foods', 'source', 'custom');
+  const all = await dbGetAll('foods');
   const el = document.getElementById('custom-foods-list');
   if (!all.length) { el.innerHTML = '<p class="text-sm text-gray-500">尚無自訂食物</p>'; return; }
   el.innerHTML = all.map(f => `
@@ -759,7 +722,7 @@ async function saveGoals() {
 // ─── Backup ───────────────────────────────────────────────────────────────────
 async function exportData() {
   const logs = await dbGetAll('logs');
-  const customFoods = await dbGetByIndex('foods', 'source', 'custom');
+  const customFoods = await dbGetAll('foods');
   const goalsData = await dbGet('settings', 'goals');
   const pctData = await dbGet('settings', 'goalPct');
   const modeData = await dbGet('settings', 'goalMode');
