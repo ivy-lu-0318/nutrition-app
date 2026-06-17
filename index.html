@@ -117,7 +117,11 @@
 </div>
 
 <!-- Tab: History -->
-<div id="tab-history" class="px-4 py-4 hidden">
+<div id="tab-history" class="px-4 py-4 hidden space-y-4">
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-3">近 7 天熱量</p>
+    <div id="calorie-chart"></div>
+  </div>
   <div class="card">
     <p class="text-sm font-semibold text-gray-300 mb-3">近期紀錄</p>
     <div id="history-list" class="space-y-2"></div>
@@ -657,6 +661,9 @@ async function loadHistory() {
     if (!byDate[l.date]) byDate[l.date] = [];
     byDate[l.date].push(l);
   }
+
+  renderCalorieChart(byDate);
+
   const dates = Object.keys(byDate).sort().reverse().slice(0, 14);
   const el = document.getElementById('history-list');
   if (!dates.length) { el.innerHTML = '<p class="text-sm text-gray-500">尚無紀錄</p>'; return; }
@@ -673,6 +680,79 @@ async function loadHistory() {
       </div>
     </div>`;
   }).join('');
+}
+
+function renderCalorieChart(byDate) {
+  // 取最近 7 天（含今天，沒資料的日子顯示 0）
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().split('T')[0];
+    const logs = byDate[iso] || [];
+    days.push({ iso, label: `${d.getMonth()+1}/${d.getDate()}`, calories: sumLogs(logs).calories });
+  }
+
+  const W = 320, H = 140, padL = 40, padR = 12, padT = 16, padB = 28;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const goal = goals.calories || 0;
+  const maxVal = Math.max(...days.map(d => d.calories), goal, 100);
+  const minVal = 0;
+
+  const xOf = i => padL + (i / (days.length - 1)) * chartW;
+  const yOf = v => padT + chartH - ((v - minVal) / (maxVal - minVal)) * chartH;
+
+  // 折線 path
+  const pts = days.map((d, i) => `${xOf(i).toFixed(1)},${yOf(d.calories).toFixed(1)}`);
+  const linePath = `M ${pts.join(' L ')}`;
+
+  // 填色區域
+  const fillPath = `M ${xOf(0).toFixed(1)},${yOf(0).toFixed(1)} L ${pts.join(' L ')} L ${xOf(6).toFixed(1)},${yOf(0).toFixed(1)} Z`;
+
+  // Y 軸刻度（2 條）
+  const yTick1 = Math.round(maxVal / 2);
+  const yTick2 = Math.round(maxVal);
+
+  // 目標線 Y
+  const goalY = yOf(goal).toFixed(1);
+
+  // 資料點 + 數值標籤
+  const dots = days.map((d, i) => {
+    const cx = xOf(i).toFixed(1);
+    const cy = yOf(d.calories).toFixed(1);
+    const over = goal && d.calories > goal;
+    const color = d.calories === 0 ? '#4b5563' : over ? '#f87171' : '#10b981';
+    const labelY = d.calories === 0 ? cy : (parseFloat(cy) - 8).toFixed(1);
+    const label = d.calories > 0 ? d.calories : '';
+    return `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${color}"/>
+      <text x="${cx}" y="${labelY}" text-anchor="middle" font-size="9" fill="${color}">${label}</text>`;
+  }).join('');
+
+  // X 軸日期標籤
+  const xLabels = days.map((d, i) =>
+    `<text x="${xOf(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="#6b7280">${d.label}</text>`
+  ).join('');
+
+  // Y 軸刻度標籤
+  const yLabels = [yTick1, yTick2].map(v =>
+    `<text x="${padL - 4}" y="${(yOf(v) + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#6b7280">${v}</text>
+     <line x1="${padL}" y1="${yOf(v).toFixed(1)}" x2="${W - padR}" y2="${yOf(v).toFixed(1)}" stroke="#374151" stroke-width="0.5"/>`
+  ).join('');
+
+  const goalLine = goal ? `
+    <line x1="${padL}" y1="${goalY}" x2="${W - padR}" y2="${goalY}" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="4,3"/>
+    <text x="${W - padR}" y="${(parseFloat(goalY) - 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#f59e0b">目標 ${goal}</text>` : '';
+
+  document.getElementById('calorie-chart').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;">
+      ${yLabels}
+      ${goalLine}
+      <path d="${fillPath}" fill="#10b981" fill-opacity="0.08"/>
+      <path d="${linePath}" fill="none" stroke="#10b981" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      ${xLabels}
+    </svg>`;
 }
 
 function jumpToDate(date) {
