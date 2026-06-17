@@ -389,7 +389,7 @@ async function searchFoods() {
     return;
   }
   searchTimeout = setTimeout(async () => {
-    const customFoods = await dbGetByIndex('foods', 'source', 'custom');
+    const customFoods = await dbGetAll('foods');
     const allFoods = [...customFoods, ...tfndFoods];
     const results = allFoods
       .filter(f => f.name.includes(q))
