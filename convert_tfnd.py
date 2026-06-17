@@ -17,6 +17,13 @@ EXCEL_FILE = "TFND.xlsx"
 COLUMN_MAP_CANDIDATES = [
     {
         "name": "樣品名稱",
+        "calories": "熱量(kcal)",
+        "protein": "粗蛋白(g)",
+        "carbs": "總碳水化合物(g)",
+        "fat": "粗脂肪(g)",
+    },
+    {
+        "name": "樣品名稱",
         "calories": "熱量",
         "protein": "粗蛋白",
         "carbs": "總碳水化合物",
@@ -29,13 +36,6 @@ COLUMN_MAP_CANDIDATES = [
         "carbs": "碳水化合物(g)",
         "fat": "脂肪(g)",
     },
-    {
-        "name": "樣品名稱",
-        "calories": "熱量(kcal)",
-        "protein": "蛋白質",
-        "carbs": "碳水化合物",
-        "fat": "脂肪",
-    },
 ]
 
 def find_columns(df):
@@ -46,7 +46,8 @@ def find_columns(df):
 
 def convert():
     try:
-        df = pd.read_excel(EXCEL_FILE, skiprows=0)
+        # TFND Excel 第一行是說明文字，第二行才是欄位名稱，故 skiprows=1
+        df = pd.read_excel(EXCEL_FILE, skiprows=1)
     except FileNotFoundError:
         print(f"找不到 {EXCEL_FILE}，請確認檔案放在同目錄下")
         sys.exit(1)
