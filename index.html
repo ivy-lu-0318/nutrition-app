@@ -368,21 +368,32 @@ async function countFoods(source) {
 }
 
 async function tryLoadTFND() {
+  const el = document.getElementById('tfnd-status');
   try {
+    el.textContent = '正在下載食物資料庫...';
     const resp = await fetch('./tfnd.json');
-    if (!resp.ok) throw new Error('找不到 tfnd.json');
+    if (!resp.ok) throw new Error(`下載失敗（HTTP ${resp.status}）`);
     const data = await resp.json();
-    const tx = db.transaction('foods', 'readwrite');
-    const store = tx.objectStore('foods');
-    for (const food of data) store.put(food);
-    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
-    const el = document.getElementById('tfnd-status');
+    el.textContent = `下載完成，寫入資料庫中（共 ${data.length} 筆）...`;
+
+    // 分批寫入，每批 100 筆，避免 iOS Safari 大型 transaction 失敗
+    const BATCH = 100;
+    for (let i = 0; i < data.length; i += BATCH) {
+      const chunk = data.slice(i, i + BATCH);
+      await new Promise((res, rej) => {
+        const tx = db.transaction('foods', 'readwrite');
+        const store = tx.objectStore('foods');
+        for (const food of chunk) store.put(food);
+        tx.oncomplete = res;
+        tx.onerror = () => rej(tx.error);
+      });
+    }
+
     el.textContent = `已載入 ${data.length} 筆 TFND 食物資料（生重 / 100g）`;
     tfndLoaded = true;
     showToast(`TFND 資料庫載入完成（${data.length} 筆）`);
   } catch (err) {
-    const el = document.getElementById('tfnd-status');
-    el.textContent = '尚未載入 TFND 資料。請先執行 convert_tfnd.py 並把 tfnd.json 放在同目錄。';
+    el.innerHTML = `載入失敗：${err.message} <button class="btn-green text-xs px-2 py-1 ml-2" onclick="tryLoadTFND()">重試</button>`;
   }
 }
 
@@ -392,7 +403,13 @@ let searchTimeout;
 async function searchFoods() {
   clearTimeout(searchTimeout);
   const q = document.getElementById('food-search').value.trim();
-  if (!q) { document.getElementById('search-results').classList.add('hidden'); return; }
+  const el = document.getElementById('search-results');
+  if (!q) { el.classList.add('hidden'); return; }
+  if (!tfndLoaded) {
+    el.innerHTML = '<div class="px-3 py-2 text-sm text-yellow-400">食物資料庫載入中，請稍候…</div>';
+    el.classList.remove('hidden');
+    return;
+  }
   searchTimeout = setTimeout(async () => {
     const all = await dbGetAll('foods');
     const results = all
