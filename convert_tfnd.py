@@ -66,7 +66,8 @@ def convert():
 
         def to_float(val):
             try:
-                return round(float(val), 2)
+                v = float(val)
+                return 0.0 if v != v else round(v, 2)  # NaN check: NaN != NaN
             except (ValueError, TypeError):
                 return 0.0
 

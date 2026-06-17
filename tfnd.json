@@ -17000,9 +17000,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 385.46,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 99.6,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17011,9 +17011,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 386.64,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 99.91,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17044,9 +17044,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 325.37,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 84.08,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17055,9 +17055,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 297.42,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 76.85,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17066,9 +17066,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 299.79,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 77.47,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17121,9 +17121,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 360.25,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 93.09,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17189,7 +17189,7 @@
       "calories": 46.4,
       "protein": 0.0,
       "carbs": 11.6,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17297,9 +17297,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 28.04,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 7.01,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17310,7 +17310,7 @@
       "calories": 43.56,
       "protein": 0.0,
       "carbs": 10.89,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17319,9 +17319,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 12.75,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 3.19,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17341,9 +17341,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 17.76,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 4.44,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17363,9 +17363,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 37.25,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 9.31,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17374,9 +17374,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 51.36,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 12.84,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17385,9 +17385,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 1.32,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 0.33,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17396,9 +17396,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 36.68,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 9.17,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17429,9 +17429,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 42.34,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 10.59,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17440,9 +17440,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 45.88,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 11.47,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17497,7 +17497,7 @@
       "calories": 0.14,
       "protein": 0.06,
       "carbs": 0.0,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17508,7 +17508,7 @@
       "calories": 34.43,
       "protein": 0.0,
       "carbs": 8.61,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17519,7 +17519,7 @@
       "calories": 36.68,
       "protein": 0.0,
       "carbs": 9.17,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17530,7 +17530,7 @@
       "calories": 0.08,
       "protein": 0.0,
       "carbs": 0.02,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17541,7 +17541,7 @@
       "calories": 0.4,
       "protein": 0.05,
       "carbs": 0.05,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17585,7 +17585,7 @@
       "calories": 0.36,
       "protein": 0.05,
       "carbs": 0.04,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17596,7 +17596,7 @@
       "calories": 21.52,
       "protein": 0.0,
       "carbs": 5.38,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17706,7 +17706,7 @@
       "calories": 0.25,
       "protein": 0.06,
       "carbs": 0.0,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17717,7 +17717,7 @@
       "calories": 28.48,
       "protein": 0.06,
       "carbs": 7.06,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17728,7 +17728,7 @@
       "calories": 29.64,
       "protein": 0.0,
       "carbs": 7.41,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17750,7 +17750,7 @@
       "calories": 33.04,
       "protein": 0.0,
       "carbs": 8.26,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17772,7 +17772,7 @@
       "calories": 39.4,
       "protein": 0.0,
       "carbs": 9.85,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17783,7 +17783,7 @@
       "calories": 54.12,
       "protein": 0.15,
       "carbs": 13.38,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17792,9 +17792,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 57.04,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 14.26,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17805,7 +17805,7 @@
       "calories": 28.44,
       "protein": 0.08,
       "carbs": 7.03,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17814,9 +17814,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 52.16,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 13.04,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -17858,9 +17858,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 397.91,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 99.48,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18355,7 +18355,7 @@
       "calories": 250.5,
       "protein": 44.5,
       "carbs": 18.13,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18366,7 +18366,7 @@
       "calories": 269.28,
       "protein": 45.0,
       "carbs": 22.32,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18452,9 +18452,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 9.68,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 2.42,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18474,9 +18474,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 27.24,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 6.81,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18485,9 +18485,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 13.09,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 3.27,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18507,9 +18507,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 2.82,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 0.7,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18529,9 +18529,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 41.77,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 10.44,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18540,9 +18540,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 180.68,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 45.17,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18553,7 +18553,7 @@
       "calories": 90.04,
       "protein": 7.79,
       "carbs": 14.72,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18564,7 +18564,7 @@
       "calories": 83.46,
       "protein": 9.32,
       "carbs": 11.55,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18597,7 +18597,7 @@
       "calories": 77.39,
       "protein": 7.44,
       "carbs": 11.91,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18608,7 +18608,7 @@
       "calories": 56.35,
       "protein": 6.47,
       "carbs": 7.62,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18619,7 +18619,7 @@
       "calories": 103.38,
       "protein": 6.82,
       "carbs": 19.02,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -18705,7 +18705,7 @@
     "source": "tfnd",
     "per100g": {
       "calories": 883.12,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 0.0,
       "fat": 99.9
     }
@@ -20135,7 +20135,7 @@
     "source": "tfnd",
     "per100g": {
       "calories": 90.97,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 22.3,
       "fat": 0.2
     }
@@ -20146,9 +20146,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 1.69,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 0.42,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -20157,9 +20157,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 52.5,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 13.13,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -22324,9 +22324,9 @@
     "source": "tfnd",
     "per100g": {
       "calories": 400.0,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 100.0,
-      "fat": NaN
+      "fat": 0
     }
   },
   {
@@ -24293,7 +24293,7 @@
     "source": "tfnd",
     "per100g": {
       "calories": 49.01,
-      "protein": NaN,
+      "protein": 0,
       "carbs": 8.88,
       "fat": 0.0
     }
