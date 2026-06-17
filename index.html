@@ -559,9 +559,12 @@ function renderMealLogs(logs) {
       const items = byMeal[m];
       const sub = sumLogs(items);
       return `<div class="card meal-section">
-        <div class="flex justify-between items-center mb-2">
-          <span class="font-medium text-gray-200">${MEAL_LABELS[m]}</span>
-          <span class="text-xs text-gray-400">${sub.calories} kcal</span>
+        <div class="mb-2">
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-gray-200">${MEAL_LABELS[m]}</span>
+            <span class="text-sm font-semibold text-emerald-400">${sub.calories} kcal</span>
+          </div>
+          <div class="text-xs text-gray-500 mt-0.5">蛋白質 ${sub.protein}g｜碳水 ${sub.carbs}g｜脂肪 ${sub.fat}g</div>
         </div>
         ${items.map(l => {
           if (l.id === editingLogId) {
