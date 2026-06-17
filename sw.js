@@ -19,7 +19,12 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    ).then(() => {
+      // 通知所有開著的分頁：有新版本，自動重新載入
+      return self.clients.matchAll({ type: 'window' }).then(clients =>
+        clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }))
+      );
+    })
   );
   self.clients.claim();
 });
