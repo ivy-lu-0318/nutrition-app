@@ -149,7 +149,10 @@
           <input type="number" id="custom-fat" placeholder="3.6" oninput="calcCustomCalories()">
         </div>
       </div>
-      <button class="btn-green w-full" onclick="addCustomFood()">儲存自訂食物</button>
+      <div class="flex gap-2">
+        <button id="custom-save-btn" class="btn-green flex-1" onclick="addCustomFood()">儲存自訂食物</button>
+        <button id="custom-cancel-btn" class="btn-gray hidden" onclick="cancelEditCustomFood()">取消</button>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -324,6 +327,8 @@ let selectedFood = null;
 let goals = { calories: 1500, protein: 150, carbs: 113, fat: 50 };
 let goalMode = 'pct';
 let tfndFoods = [];   // TFND 資料放記憶體，不存 IndexedDB
+let editingFoodId = null;
+let editingLogId = null;
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 async function init() {
@@ -558,16 +563,72 @@ function renderMealLogs(logs) {
           <span class="font-medium text-gray-200">${MEAL_LABELS[m]}</span>
           <span class="text-xs text-gray-400">${sub.calories} kcal</span>
         </div>
-        ${items.map(l => `
-          <div class="flex items-center justify-between py-1 border-b border-gray-700 last:border-0">
-            <div class="flex-1 min-w-0">
-              <div class="text-sm text-gray-200 truncate">${l.foodName}</div>
-              <div class="text-xs text-gray-500">${l.grams}g｜${l.calories}kcal P${l.protein} C${l.carbs} F${l.fat}</div>
-            </div>
-            <button class="btn-red ml-2 flex-shrink-0" onclick="deleteLog(${l.id})">刪除</button>
-          </div>`).join('')}
+        ${items.map(l => {
+          if (l.id === editingLogId) {
+            return `
+              <div class="py-2 border-b border-gray-700 last:border-0 space-y-2">
+                <div class="text-sm text-emerald-400 truncate">${l.foodName}</div>
+                <div class="flex gap-2">
+                  <div class="flex-1">
+                    <label class="text-xs text-gray-400">克數（g）</label>
+                    <input type="number" id="edit-log-grams" value="${l.grams}" min="1" max="9999">
+                  </div>
+                  <div class="flex-1">
+                    <label class="text-xs text-gray-400">餐別</label>
+                    <select id="edit-log-meal">
+                      ${MEAL_ORDER.map(mo => `<option value="${mo}"${mo === l.meal ? ' selected' : ''}>${MEAL_LABELS[mo]}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button class="btn-green flex-1 text-sm py-1" onclick="confirmEditLog(${l.id})">確認</button>
+                  <button class="btn-gray flex-1 text-sm py-1" onclick="cancelEditLog()">取消</button>
+                </div>
+              </div>`;
+          }
+          return `
+            <div class="flex items-center justify-between py-1 border-b border-gray-700 last:border-0">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-gray-200 truncate">${l.foodName}</div>
+                <div class="text-xs text-gray-500">${l.grams}g｜${l.calories}kcal P${l.protein} C${l.carbs} F${l.fat}</div>
+              </div>
+              <div class="flex gap-1 ml-2 flex-shrink-0">
+                <button class="btn-gray text-xs py-1 px-2" onclick="startEditLog(${l.id})">編輯</button>
+                <button class="btn-red" onclick="deleteLog(${l.id})">刪除</button>
+              </div>
+            </div>`;
+        }).join('')}
       </div>`;
     }).join('');
+}
+
+function startEditLog(id) {
+  editingLogId = id;
+  loadDayLogs();
+}
+
+function cancelEditLog() {
+  editingLogId = null;
+  loadDayLogs();
+}
+
+async function confirmEditLog(id) {
+  const newGrams = parseFloat(document.getElementById('edit-log-grams').value);
+  const newMeal = document.getElementById('edit-log-meal').value;
+  if (!newGrams || newGrams <= 0) { showToast('請輸入克數'); return; }
+  const log = await dbGet('logs', id);
+  if (!log) return;
+  const food = tfndFoods.find(f => f.id === log.foodId) || await dbGet('foods', log.foodId);
+  const nutrients = food
+    ? calcNutrients(food.per100g, newGrams)
+    : { calories: round1(log.calories * newGrams / log.grams),
+        protein:  round1(log.protein  * newGrams / log.grams),
+        carbs:    round1(log.carbs    * newGrams / log.grams),
+        fat:      round1(log.fat      * newGrams / log.grams) };
+  await dbPut('logs', { ...log, meal: newMeal, grams: newGrams, ...nutrients });
+  editingLogId = null;
+  await loadDayLogs();
+  showToast('已更新');
 }
 
 async function deleteLog(id) {
@@ -630,7 +691,7 @@ async function addCustomFood() {
   const name = document.getElementById('custom-name').value.trim();
   if (!name) { showToast('請輸入食物名稱'); return; }
   const food = {
-    id: `custom_${Date.now()}`,
+    id: editingFoodId || `custom_${Date.now()}`,
     name,
     source: 'custom',
     per100g: {
@@ -640,12 +701,40 @@ async function addCustomFood() {
       fat:      parseFloat(document.getElementById('custom-fat').value) || 0,
     }
   };
+  const msg = editingFoodId ? `「${name}」已更新` : `「${name}」已儲存`;
   await dbPut('foods', food);
+  editingFoodId = null;
   ['custom-name','custom-calories','custom-protein','custom-carbs','custom-fat'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('custom-save-btn').textContent = '儲存自訂食物';
+  document.getElementById('custom-cancel-btn').classList.add('hidden');
   await renderCustomFoodsList();
-  showToast(`「${name}」已儲存`);
+  showToast(msg);
+}
+
+async function editCustomFood(id) {
+  const food = await dbGet('foods', id);
+  if (!food) return;
+  editingFoodId = id;
+  document.getElementById('custom-name').value = food.name;
+  document.getElementById('custom-calories').value = food.per100g.calories;
+  document.getElementById('custom-protein').value = food.per100g.protein;
+  document.getElementById('custom-carbs').value = food.per100g.carbs;
+  document.getElementById('custom-fat').value = food.per100g.fat;
+  document.getElementById('custom-save-btn').textContent = '更新食物';
+  document.getElementById('custom-cancel-btn').classList.remove('hidden');
+  document.getElementById('custom-name').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('custom-name').focus();
+}
+
+function cancelEditCustomFood() {
+  editingFoodId = null;
+  ['custom-name','custom-calories','custom-protein','custom-carbs','custom-fat'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('custom-save-btn').textContent = '儲存自訂食物';
+  document.getElementById('custom-cancel-btn').classList.add('hidden');
 }
 
 async function renderCustomFoodsList() {
@@ -658,7 +747,10 @@ async function renderCustomFoodsList() {
         <div class="text-sm text-gray-200">${f.name}</div>
         <div class="text-xs text-gray-500">${f.per100g.calories}kcal P${f.per100g.protein} C${f.per100g.carbs} F${f.per100g.fat}</div>
       </div>
-      <button class="btn-red ml-2" onclick="deleteCustomFood('${f.id}')">刪除</button>
+      <div class="flex gap-1 ml-2 flex-shrink-0">
+        <button class="btn-gray text-xs py-1 px-2" onclick="editCustomFood('${f.id}')">編輯</button>
+        <button class="btn-red" onclick="deleteCustomFood('${f.id}')">刪除</button>
+      </div>
     </div>`).join('');
 }
 
