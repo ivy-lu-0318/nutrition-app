@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="營養記錄">
+  <meta name="theme-color" content="#10b981">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>營養記錄</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #111827; color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
+    .tab-btn { transition: all 0.2s; }
+    input[type="number"], input[type="text"], select {
+      background: #1f2937; border: 1px solid #374151; color: #f9fafb;
+      border-radius: 0.5rem; padding: 0.5rem 0.75rem; width: 100%;
+    }
+    input:focus, select:focus { outline: none; border-color: #10b981; }
+    .card { background: #1f2937; border-radius: 0.75rem; padding: 1rem; }
+    .btn-green { background: #10b981; color: white; border-radius: 0.5rem; padding: 0.5rem 1rem; font-weight: 600; }
+    .btn-green:active { background: #059669; }
+    .btn-gray { background: #374151; color: #d1d5db; border-radius: 0.5rem; padding: 0.5rem 1rem; }
+    .btn-red { background: #dc2626; color: white; border-radius: 0.375rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    .progress-bar { height: 6px; border-radius: 3px; background: #374151; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    #search-results { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; max-height: 240px; overflow-y: auto; }
+    .search-item:hover, .search-item:active { background: #374151; }
+    .meal-section { border-left: 3px solid #374151; padding-left: 0.75rem; }
+    #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #065f46; color: white; padding: 0.5rem 1.25rem; border-radius: 2rem; font-size: 0.875rem; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    #toast.show { opacity: 1; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Header -->
+<div class="sticky top-0 z-10" style="background:#111827; padding-top: env(safe-area-inset-top, 0px);">
+  <div class="flex items-center justify-between px-4 py-3">
+    <h1 class="text-lg font-bold text-emerald-400">營養記錄</h1>
+    <span id="header-date" class="text-sm text-gray-400"></span>
+  </div>
+  <!-- Tabs -->
+  <div class="flex border-b border-gray-700 px-4">
+    <button class="tab-btn tab-active flex-1 py-2 text-sm font-medium" onclick="switchTab('today')">今日</button>
+    <button class="tab-btn flex-1 py-2 text-sm font-medium text-gray-400" onclick="switchTab('history')">歷史</button>
+    <button class="tab-btn flex-1 py-2 text-sm font-medium text-gray-400" onclick="switchTab('foods')">食物庫</button>
+    <button class="tab-btn flex-1 py-2 text-sm font-medium text-gray-400" onclick="switchTab('settings')">設定</button>
+  </div>
+</div>
+
+<!-- Tab: Today -->
+<div id="tab-today" class="px-4 py-4 space-y-4">
+
+  <!-- Daily Summary -->
+  <div class="card" id="summary-card">
+    <div class="flex justify-between items-center mb-3">
+      <span class="font-semibold text-gray-200">今日總計</span>
+      <input type="date" id="log-date" class="text-sm" style="width:auto; padding:0.25rem 0.5rem;" onchange="loadDayLogs()">
+    </div>
+    <div class="grid grid-cols-4 gap-2 text-center mb-3" id="summary-grid">
+      <!-- filled by JS -->
+    </div>
+    <div class="space-y-2" id="goals-progress">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- Add Food -->
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-2">新增食物</p>
+    <div class="space-y-2">
+      <div class="relative">
+        <input type="text" id="food-search" placeholder="搜尋食物名稱..." oninput="searchFoods()" onblur="hideSearchResultsDelayed()">
+        <div id="search-results" class="absolute z-20 w-full mt-1 hidden"></div>
+      </div>
+      <div id="selected-food-row" class="hidden space-y-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="selected-food-name" class="text-sm text-emerald-400 font-medium flex-1"></span>
+          <button class="btn-gray text-xs py-1 px-2" onclick="clearSelectedFood()">✕ 清除</button>
+        </div>
+        <div class="text-xs text-gray-400" id="selected-food-per100g"></div>
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="text-xs text-gray-400">克數（g）</label>
+            <input type="number" id="food-grams" placeholder="100" min="1" max="9999">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-gray-400">餐別</label>
+            <select id="meal-type">
+              <option value="breakfast">早餐</option>
+              <option value="lunch">午餐</option>
+              <option value="dinner">晚餐</option>
+              <option value="snack">點心</option>
+            </select>
+          </div>
+        </div>
+        <div class="text-xs text-gray-400" id="food-preview"></div>
+        <button class="btn-green w-full" onclick="addFoodLog()">＋ 加入記錄</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meal logs -->
+  <div id="meal-logs" class="space-y-3"></div>
+
+</div>
+
+<!-- Tab: History -->
+<div id="tab-history" class="px-4 py-4 hidden">
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-3">近期紀錄</p>
+    <div id="history-list" class="space-y-2"></div>
+  </div>
+</div>
+
+<!-- Tab: Foods -->
+<div id="tab-foods" class="px-4 py-4 hidden">
+  <div class="card mb-4">
+    <p class="text-sm font-semibold text-gray-300 mb-2">新增自訂食物</p>
+    <p class="text-xs text-gray-500 mb-3">數值以每 100g 為基準</p>
+    <div class="space-y-2">
+      <input type="text" id="custom-name" placeholder="食物名稱（例：水煮雞胸肉（熟））">
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-gray-400">熱量 (kcal)</label>
+          <input type="number" id="custom-calories" placeholder="165">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">蛋白質 (g)</label>
+          <input type="number" id="custom-protein" placeholder="31">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">碳水 (g)</label>
+          <input type="number" id="custom-carbs" placeholder="0">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">脂肪 (g)</label>
+          <input type="number" id="custom-fat" placeholder="3.6">
+        </div>
+      </div>
+      <button class="btn-green w-full" onclick="addCustomFood()">儲存自訂食物</button>
+    </div>
+  </div>
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-2">自訂食物清單</p>
+    <div id="custom-foods-list" class="space-y-2"></div>
+  </div>
+</div>
+
+<!-- Tab: Settings -->
+<div id="tab-settings" class="px-4 py-4 hidden space-y-4">
+
+  <!-- Goals -->
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-3">每日目標</p>
+    <div class="mb-3">
+      <label class="text-xs text-gray-400">總熱量目標 (kcal)</label>
+      <input type="number" id="goal-calories" placeholder="1500" oninput="recalcGoalsFromPct()">
+    </div>
+    <!-- Mode toggle -->
+    <div class="flex gap-2 mb-3">
+      <button id="mode-pct-btn" class="btn-green flex-1 text-sm" onclick="setGoalMode('pct')">百分比模式</button>
+      <button id="mode-direct-btn" class="btn-gray flex-1 text-sm" onclick="setGoalMode('direct')">直接輸入</button>
+    </div>
+
+    <!-- Percentage mode -->
+    <div id="pct-mode" class="space-y-2">
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="text-xs text-gray-400">蛋白質 %</label>
+          <input type="number" id="pct-protein" placeholder="40" min="0" max="100" oninput="recalcGoalsFromPct()">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">碳水 %</label>
+          <input type="number" id="pct-carbs" placeholder="30" min="0" max="100" oninput="recalcGoalsFromPct()">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">脂肪 %</label>
+          <input type="number" id="pct-fat" placeholder="30" min="0" max="100" oninput="recalcGoalsFromPct()">
+        </div>
+      </div>
+      <div id="pct-sum-display" class="text-xs text-gray-400"></div>
+      <div id="pct-result-display" class="text-xs text-emerald-400 space-y-1"></div>
+    </div>
+
+    <!-- Direct mode -->
+    <div id="direct-mode" class="hidden space-y-2">
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="text-xs text-gray-400">蛋白質 (g)</label>
+          <input type="number" id="goal-protein-direct" placeholder="150">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">碳水 (g)</label>
+          <input type="number" id="goal-carbs-direct" placeholder="113">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">脂肪 (g)</label>
+          <input type="number" id="goal-fat-direct" placeholder="50">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-green w-full mt-3" onclick="saveGoals()">儲存目標</button>
+  </div>
+
+  <!-- Backup -->
+  <div class="card space-y-2">
+    <p class="text-sm font-semibold text-gray-300 mb-1">資料備份</p>
+    <p class="text-xs text-gray-500">定期匯出後存到 iCloud，換裝置時匯入即可恢復所有資料。</p>
+    <button class="btn-green w-full" onclick="exportData()">匯出備份（下載 JSON）</button>
+    <label class="btn-gray w-full text-center cursor-pointer block">
+      匯入備份
+      <input type="file" accept=".json" class="hidden" onchange="importData(event)">
+    </label>
+  </div>
+
+  <!-- TFND status -->
+  <div class="card">
+    <p class="text-sm font-semibold text-gray-300 mb-1">食物資料庫</p>
+    <p class="text-xs text-gray-500" id="tfnd-status">載入中...</p>
+    <p class="text-xs text-gray-600 mt-1">資料來源：台灣食藥署 TFND，以生重 / 100g 為基準</p>
+  </div>
+
+</div>
+
+<!-- Bottom padding for safe area -->
+<div class="safe-bottom h-4"></div>
+
+<script>
+// ─── DB ──────────────────────────────────────────────────────────────────────
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('NutritionApp', 2);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('foods')) {
+        const fs = d.createObjectStore('foods', { keyPath: 'id' });
+        fs.createIndex('name', 'name', { unique: false });
+        fs.createIndex('source', 'source', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('logs')) {
+        const ls = d.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+        ls.createIndex('date', 'date', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('settings')) {
+        d.createObjectStore('settings', { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbPut(store, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).put(val);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(key);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbGetByIndex(store, index, value) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).index(index).getAll(value);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbClearStore(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let selectedFood = null;
+let goals = { calories: 1500, protein: 150, carbs: 113, fat: 50 };
+let goalMode = 'pct';
+let tfndLoaded = false;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+async function init() {
+  db = await openDB();
+  await loadGoals();
+  setTodayDate();
+  await loadDayLogs();
+  await checkTFND();
+  renderCustomFoodsList();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+}
+
+function setTodayDate() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('log-date').value = today;
+  document.getElementById('header-date').textContent = formatDate(today);
+}
+
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getMonth()+1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
+}
+
+// ─── TFND ────────────────────────────────────────────────────────────────────
+async function checkTFND() {
+  const count = await countFoods('tfnd');
+  const el = document.getElementById('tfnd-status');
+  if (count > 0) {
+    el.textContent = `已載入 ${count} 筆 TFND 食物資料（生重 / 100g）`;
+    tfndLoaded = true;
+  } else {
+    el.textContent = '尚未載入 TFND 資料，嘗試自動從 tfnd.json 匯入...';
+    await tryLoadTFND();
+  }
+}
+
+async function countFoods(source) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction('foods', 'readonly');
+    const req = tx.objectStore('foods').index('source').count(source);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(0);
+  });
+}
+
+async function tryLoadTFND() {
+  try {
+    const resp = await fetch('./tfnd.json');
+    if (!resp.ok) throw new Error('找不到 tfnd.json');
+    const data = await resp.json();
+    const tx = db.transaction('foods', 'readwrite');
+    const store = tx.objectStore('foods');
+    for (const food of data) store.put(food);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    const el = document.getElementById('tfnd-status');
+    el.textContent = `已載入 ${data.length} 筆 TFND 食物資料（生重 / 100g）`;
+    tfndLoaded = true;
+    showToast(`TFND 資料庫載入完成（${data.length} 筆）`);
+  } catch (err) {
+    const el = document.getElementById('tfnd-status');
+    el.textContent = '尚未載入 TFND 資料。請先執行 convert_tfnd.py 並把 tfnd.json 放在同目錄。';
+  }
+}
+
+// ─── Search ──────────────────────────────────────────────────────────────────
+let searchTimeout;
+
+async function searchFoods() {
+  clearTimeout(searchTimeout);
+  const q = document.getElementById('food-search').value.trim();
+  if (!q) { document.getElementById('search-results').classList.add('hidden'); return; }
+  searchTimeout = setTimeout(async () => {
+    const all = await dbGetAll('foods');
+    const results = all
+      .filter(f => f.name.includes(q))
+      .sort((a, b) => {
+        if (a.source === 'custom' && b.source !== 'custom') return -1;
+        if (b.source === 'custom' && a.source !== 'custom') return 1;
+        return a.name.length - b.name.length;
+      })
+      .slice(0, 30);
+    renderSearchResults(results);
+  }, 200);
+}
+
+function renderSearchResults(results) {
+  const el = document.getElementById('search-results');
+  if (!results.length) { el.classList.add('hidden'); return; }
+  el.innerHTML = results.map(f => `
+    <div class="search-item px-3 py-2 cursor-pointer flex items-center justify-between"
+         onmousedown="selectFood('${f.id}')">
+      <span class="text-sm">${f.name}</span>
+      <span class="text-xs text-gray-500">${f.source === 'custom' ? '自訂' : 'TFND'} · ${f.per100g.calories} kcal</span>
+    </div>`).join('');
+  el.classList.remove('hidden');
+}
+
+function hideSearchResultsDelayed() {
+  setTimeout(() => document.getElementById('search-results').classList.add('hidden'), 200);
+}
+
+async function selectFood(id) {
+  const food = await dbGet('foods', id);
+  if (!food) return;
+  selectedFood = food;
+  document.getElementById('food-search').value = food.name;
+  document.getElementById('search-results').classList.add('hidden');
+  document.getElementById('selected-food-name').textContent = food.name;
+  document.getElementById('selected-food-per100g').textContent =
+    `每 100g：${food.per100g.calories} kcal｜蛋白質 ${food.per100g.protein}g｜碳水 ${food.per100g.carbs}g｜脂肪 ${food.per100g.fat}g`;
+  document.getElementById('selected-food-row').classList.remove('hidden');
+  document.getElementById('food-grams').value = '';
+  document.getElementById('food-preview').textContent = '';
+  document.getElementById('food-grams').addEventListener('input', updateFoodPreview);
+  updateFoodPreview();
+}
+
+function updateFoodPreview() {
+  if (!selectedFood) return;
+  const g = parseFloat(document.getElementById('food-grams').value) || 0;
+  if (!g) { document.getElementById('food-preview').textContent = ''; return; }
+  const r = calcNutrients(selectedFood.per100g, g);
+  document.getElementById('food-preview').textContent =
+    `→ ${r.calories} kcal｜蛋白質 ${r.protein}g｜碳水 ${r.carbs}g｜脂肪 ${r.fat}g`;
+}
+
+function calcNutrients(per100g, grams) {
+  const f = grams / 100;
+  return {
+    calories: round1(per100g.calories * f),
+    protein:  round1(per100g.protein * f),
+    carbs:    round1(per100g.carbs * f),
+    fat:      round1(per100g.fat * f),
+  };
+}
+
+function clearSelectedFood() {
+  selectedFood = null;
+  document.getElementById('food-search').value = '';
+  document.getElementById('selected-food-row').classList.add('hidden');
+}
+
+// ─── Logs ─────────────────────────────────────────────────────────────────────
+async function addFoodLog() {
+  if (!selectedFood) { showToast('請先搜尋並選取食物'); return; }
+  const g = parseFloat(document.getElementById('food-grams').value);
+  if (!g || g <= 0) { showToast('請輸入克數'); return; }
+  const meal = document.getElementById('meal-type').value;
+  const date = document.getElementById('log-date').value;
+  const nutrients = calcNutrients(selectedFood.per100g, g);
+  await dbPut('logs', {
+    date, meal,
+    foodId: selectedFood.id,
+    foodName: selectedFood.name,
+    grams: g,
+    ...nutrients,
+  });
+  clearSelectedFood();
+  await loadDayLogs();
+  showToast('已新增');
+}
+
+const MEAL_LABELS = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '點心' };
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+async function loadDayLogs() {
+  const date = document.getElementById('log-date').value;
+  document.getElementById('header-date').textContent = formatDate(date);
+  const logs = await dbGetByIndex('logs', 'date', date);
+  renderSummary(logs);
+  renderMealLogs(logs);
+}
+
+function renderSummary(logs) {
+  const total = sumLogs(logs);
+  const g = goals;
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = `
+    ${nutrientBox('熱量', total.calories, 'kcal', g.calories)}
+    ${nutrientBox('蛋白質', total.protein, 'g', g.protein)}
+    ${nutrientBox('碳水', total.carbs, 'g', g.carbs)}
+    ${nutrientBox('脂肪', total.fat, 'g', g.fat)}
+  `;
+  const prog = document.getElementById('goals-progress');
+  prog.innerHTML = [
+    progressRow('熱量', total.calories, g.calories, 'kcal', '#10b981'),
+    progressRow('蛋白質', total.protein, g.protein, 'g', '#3b82f6'),
+    progressRow('碳水', total.carbs, g.carbs, 'g', '#f59e0b'),
+    progressRow('脂肪', total.fat, g.fat, 'g', '#ef4444'),
+  ].join('');
+}
+
+function nutrientBox(label, val, unit, goal) {
+  const over = goal > 0 && val > goal;
+  const color = over ? 'text-red-400' : 'text-emerald-400';
+  return `<div class="text-center">
+    <div class="text-xs text-gray-400">${label}</div>
+    <div class="font-bold ${color}">${val}</div>
+    <div class="text-xs text-gray-500">${unit}</div>
+  </div>`;
+}
+
+function progressRow(label, val, goal, unit, color) {
+  if (!goal) return '';
+  const pct = Math.min(100, Math.round(val / goal * 100));
+  const diff = round1(goal - val);
+  const over = val > goal;
+  const diffText = over
+    ? `<span class="text-red-400">超出 ${round1(val - goal)}${unit}</span>`
+    : `<span class="text-gray-400">剩 ${diff}${unit}</span>`;
+  return `<div>
+    <div class="flex justify-between text-xs mb-1">
+      <span class="text-gray-400">${label} ${val}/${goal}${unit}</span>
+      ${diffText}
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:${pct}%; background:${color}"></div>
+    </div>
+  </div>`;
+}
+
+function renderMealLogs(logs) {
+  const byMeal = {};
+  for (const m of MEAL_ORDER) byMeal[m] = logs.filter(l => l.meal === m);
+  const el = document.getElementById('meal-logs');
+  el.innerHTML = MEAL_ORDER
+    .filter(m => byMeal[m].length > 0)
+    .map(m => {
+      const items = byMeal[m];
+      const sub = sumLogs(items);
+      return `<div class="card meal-section">
+        <div class="flex justify-between items-center mb-2">
+          <span class="font-medium text-gray-200">${MEAL_LABELS[m]}</span>
+          <span class="text-xs text-gray-400">${sub.calories} kcal</span>
+        </div>
+        ${items.map(l => `
+          <div class="flex items-center justify-between py-1 border-b border-gray-700 last:border-0">
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-gray-200 truncate">${l.foodName}</div>
+              <div class="text-xs text-gray-500">${l.grams}g｜${l.calories}kcal P${l.protein} C${l.carbs} F${l.fat}</div>
+            </div>
+            <button class="btn-red ml-2 flex-shrink-0" onclick="deleteLog(${l.id})">刪除</button>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+}
+
+async function deleteLog(id) {
+  await dbDelete('logs', id);
+  await loadDayLogs();
+  showToast('已刪除');
+}
+
+function sumLogs(logs) {
+  return {
+    calories: round1(logs.reduce((s, l) => s + (l.calories || 0), 0)),
+    protein:  round1(logs.reduce((s, l) => s + (l.protein || 0), 0)),
+    carbs:    round1(logs.reduce((s, l) => s + (l.carbs || 0), 0)),
+    fat:      round1(logs.reduce((s, l) => s + (l.fat || 0), 0)),
+  };
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const all = await dbGetAll('logs');
+  const byDate = {};
+  for (const l of all) {
+    if (!byDate[l.date]) byDate[l.date] = [];
+    byDate[l.date].push(l);
+  }
+  const dates = Object.keys(byDate).sort().reverse().slice(0, 14);
+  const el = document.getElementById('history-list');
+  if (!dates.length) { el.innerHTML = '<p class="text-sm text-gray-500">尚無紀錄</p>'; return; }
+  el.innerHTML = dates.map(d => {
+    const s = sumLogs(byDate[d]);
+    const g = goals;
+    const calColor = g.calories && s.calories > g.calories ? 'text-red-400' : 'text-emerald-400';
+    return `<div class="flex justify-between items-center py-2 border-b border-gray-700 cursor-pointer"
+      onclick="jumpToDate('${d}')">
+      <span class="text-sm text-gray-300">${formatDate(d)}</span>
+      <div class="text-right">
+        <span class="text-sm font-medium ${calColor}">${s.calories} kcal</span>
+        <span class="text-xs text-gray-500 ml-2">P${s.protein} C${s.carbs} F${s.fat}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToDate(date) {
+  document.getElementById('log-date').value = date;
+  switchTab('today');
+  loadDayLogs();
+}
+
+// ─── Custom Foods ─────────────────────────────────────────────────────────────
+async function addCustomFood() {
+  const name = document.getElementById('custom-name').value.trim();
+  if (!name) { showToast('請輸入食物名稱'); return; }
+  const food = {
+    id: `custom_${Date.now()}`,
+    name,
+    source: 'custom',
+    per100g: {
+      calories: parseFloat(document.getElementById('custom-calories').value) || 0,
+      protein:  parseFloat(document.getElementById('custom-protein').value) || 0,
+      carbs:    parseFloat(document.getElementById('custom-carbs').value) || 0,
+      fat:      parseFloat(document.getElementById('custom-fat').value) || 0,
+    }
+  };
+  await dbPut('foods', food);
+  ['custom-name','custom-calories','custom-protein','custom-carbs','custom-fat'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  await renderCustomFoodsList();
+  showToast(`「${name}」已儲存`);
+}
+
+async function renderCustomFoodsList() {
+  const all = await dbGetByIndex('foods', 'source', 'custom');
+  const el = document.getElementById('custom-foods-list');
+  if (!all.length) { el.innerHTML = '<p class="text-sm text-gray-500">尚無自訂食物</p>'; return; }
+  el.innerHTML = all.map(f => `
+    <div class="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
+      <div class="flex-1 min-w-0">
+        <div class="text-sm text-gray-200">${f.name}</div>
+        <div class="text-xs text-gray-500">${f.per100g.calories}kcal P${f.per100g.protein} C${f.per100g.carbs} F${f.per100g.fat}</div>
+      </div>
+      <button class="btn-red ml-2" onclick="deleteCustomFood('${f.id}')">刪除</button>
+    </div>`).join('');
+}
+
+async function deleteCustomFood(id) {
+  await dbDelete('foods', id);
+  await renderCustomFoodsList();
+  showToast('已刪除');
+}
+
+// ─── Goals ────────────────────────────────────────────────────────────────────
+async function loadGoals() {
+  const saved = await dbGet('settings', 'goals');
+  if (saved) goals = saved.value;
+  const savedMode = await dbGet('settings', 'goalMode');
+  if (savedMode) goalMode = savedMode.value;
+
+  document.getElementById('goal-calories').value = goals.calories || '';
+  if (goalMode === 'pct') {
+    const savedPct = await dbGet('settings', 'goalPct');
+    if (savedPct) {
+      document.getElementById('pct-protein').value = savedPct.value.protein || '';
+      document.getElementById('pct-carbs').value = savedPct.value.carbs || '';
+      document.getElementById('pct-fat').value = savedPct.value.fat || '';
+    }
+    setGoalMode('pct');
+    recalcGoalsFromPct();
+  } else {
+    document.getElementById('goal-protein-direct').value = goals.protein || '';
+    document.getElementById('goal-carbs-direct').value = goals.carbs || '';
+    document.getElementById('goal-fat-direct').value = goals.fat || '';
+    setGoalMode('direct');
+  }
+}
+
+function setGoalMode(mode) {
+  goalMode = mode;
+  document.getElementById('pct-mode').classList.toggle('hidden', mode !== 'pct');
+  document.getElementById('direct-mode').classList.toggle('hidden', mode !== 'direct');
+  document.getElementById('mode-pct-btn').className = mode === 'pct' ? 'btn-green flex-1 text-sm' : 'btn-gray flex-1 text-sm';
+  document.getElementById('mode-direct-btn').className = mode === 'direct' ? 'btn-green flex-1 text-sm' : 'btn-gray flex-1 text-sm';
+}
+
+function recalcGoalsFromPct() {
+  const cal = parseFloat(document.getElementById('goal-calories').value) || 0;
+  const pp = parseFloat(document.getElementById('pct-protein').value) || 0;
+  const cp = parseFloat(document.getElementById('pct-carbs').value) || 0;
+  const fp = parseFloat(document.getElementById('pct-fat').value) || 0;
+  const sum = pp + cp + fp;
+  const sumEl = document.getElementById('pct-sum-display');
+  sumEl.textContent = `合計 ${sum}%${sum === 100 ? ' ✅' : sum > 100 ? ' ⚠️ 超過 100%' : ''}`;
+  sumEl.className = `text-xs ${sum === 100 ? 'text-emerald-400' : 'text-yellow-400'}`;
+
+  if (cal && sum > 0) {
+    const pg = round1(cal * pp / 100 / 4);
+    const cg = round1(cal * cp / 100 / 4);
+    const fg = round1(cal * fp / 100 / 9);
+    document.getElementById('pct-result-display').innerHTML =
+      `蛋白質 ${pg}g｜碳水 ${cg}g｜脂肪 ${fg}g`;
+  }
+}
+
+async function saveGoals() {
+  const cal = parseFloat(document.getElementById('goal-calories').value) || 0;
+  let protein, carbs, fat;
+  let pctData = null;
+
+  if (goalMode === 'pct') {
+    const pp = parseFloat(document.getElementById('pct-protein').value) || 0;
+    const cp = parseFloat(document.getElementById('pct-carbs').value) || 0;
+    const fp = parseFloat(document.getElementById('pct-fat').value) || 0;
+    protein = round1(cal * pp / 100 / 4);
+    carbs   = round1(cal * cp / 100 / 4);
+    fat     = round1(cal * fp / 100 / 9);
+    pctData = { protein: pp, carbs: cp, fat: fp };
+  } else {
+    protein = parseFloat(document.getElementById('goal-protein-direct').value) || 0;
+    carbs   = parseFloat(document.getElementById('goal-carbs-direct').value) || 0;
+    fat     = parseFloat(document.getElementById('goal-fat-direct').value) || 0;
+  }
+
+  goals = { calories: cal, protein, carbs, fat };
+  await dbPut('settings', { key: 'goals', value: goals });
+  await dbPut('settings', { key: 'goalMode', value: goalMode });
+  if (pctData) await dbPut('settings', { key: 'goalPct', value: pctData });
+
+  await loadDayLogs();
+  showToast('目標已儲存');
+}
+
+// ─── Backup ───────────────────────────────────────────────────────────────────
+async function exportData() {
+  const logs = await dbGetAll('logs');
+  const customFoods = await dbGetByIndex('foods', 'source', 'custom');
+  const goalsData = await dbGet('settings', 'goals');
+  const pctData = await dbGet('settings', 'goalPct');
+  const modeData = await dbGet('settings', 'goalMode');
+
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    logs,
+    customFoods,
+    goals: goalsData?.value || goals,
+    goalPct: pctData?.value || null,
+    goalMode: modeData?.value || 'pct',
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nutrition-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('備份檔案已下載');
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data.logs) { showToast('檔案格式錯誤'); return; }
+
+    const tx = db.transaction(['logs', 'foods', 'settings'], 'readwrite');
+    const logsStore = tx.objectStore('logs');
+    const foodsStore = tx.objectStore('foods');
+    const settingsStore = tx.objectStore('settings');
+
+    for (const log of data.logs) logsStore.put(log);
+    for (const food of (data.customFoods || [])) foodsStore.put(food);
+    if (data.goals) settingsStore.put({ key: 'goals', value: data.goals });
+    if (data.goalPct) settingsStore.put({ key: 'goalPct', value: data.goalPct });
+    if (data.goalMode) settingsStore.put({ key: 'goalMode', value: data.goalMode });
+
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    await loadGoals();
+    await loadDayLogs();
+    await renderCustomFoodsList();
+    showToast(`匯入完成（${data.logs.length} 筆紀錄）`);
+  } catch (e) {
+    showToast('匯入失敗：' + e.message);
+  }
+  event.target.value = '';
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+const TABS = ['today', 'history', 'foods', 'settings'];
+
+function switchTab(name) {
+  TABS.forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== name);
+    const btn = document.querySelector(`[onclick="switchTab('${t}')"]`);
+    btn.classList.toggle('tab-active', t === name);
+    btn.classList.toggle('text-gray-400', t !== name);
+  });
+  if (name === 'history') loadHistory();
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function round1(n) { return Math.round(n * 10) / 10; }
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>
