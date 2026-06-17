@@ -404,7 +404,8 @@ function hideSearchResultsDelayed() {
 }
 
 async function selectFood(id) {
-  const food = await dbGet('foods', id);
+  // TFND 在記憶體，自訂食物在 IndexedDB
+  const food = tfndFoods.find(f => f.id === id) || await dbGet('foods', id);
   if (!food) return;
   selectedFood = food;
   document.getElementById('food-search').value = food.name;
