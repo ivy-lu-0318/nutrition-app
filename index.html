@@ -133,20 +133,20 @@
       <input type="text" id="custom-name" placeholder="食物名稱（例：水煮雞胸肉（熟））">
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-xs text-gray-400">熱量 (kcal)</label>
-          <input type="number" id="custom-calories" placeholder="165">
+          <label class="text-xs text-gray-400">熱量 (kcal)　<span class="text-gray-600">（自動計算）</span></label>
+          <input type="number" id="custom-calories" placeholder="自動" style="color:#6ee7b7;">
         </div>
         <div>
           <label class="text-xs text-gray-400">蛋白質 (g)</label>
-          <input type="number" id="custom-protein" placeholder="31">
+          <input type="number" id="custom-protein" placeholder="31" oninput="calcCustomCalories()">
         </div>
         <div>
           <label class="text-xs text-gray-400">碳水 (g)</label>
-          <input type="number" id="custom-carbs" placeholder="0">
+          <input type="number" id="custom-carbs" placeholder="0" oninput="calcCustomCalories()">
         </div>
         <div>
           <label class="text-xs text-gray-400">脂肪 (g)</label>
-          <input type="number" id="custom-fat" placeholder="3.6">
+          <input type="number" id="custom-fat" placeholder="3.6" oninput="calcCustomCalories()">
         </div>
       </div>
       <button class="btn-green w-full" onclick="addCustomFood()">儲存自訂食物</button>
@@ -614,6 +614,14 @@ function jumpToDate(date) {
 }
 
 // ─── Custom Foods ─────────────────────────────────────────────────────────────
+function calcCustomCalories() {
+  const p = parseFloat(document.getElementById('custom-protein').value) || 0;
+  const c = parseFloat(document.getElementById('custom-carbs').value) || 0;
+  const f = parseFloat(document.getElementById('custom-fat').value) || 0;
+  const cal = round1(p * 4 + c * 4 + f * 9);
+  document.getElementById('custom-calories').value = cal || '';
+}
+
 async function addCustomFood() {
   const name = document.getElementById('custom-name').value.trim();
   if (!name) { showToast('請輸入食物名稱'); return; }
